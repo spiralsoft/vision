@@ -1,31 +1,12 @@
 package primatives
 
 import breeze.linalg.DenseVector
+import primatives.IndexType.IndexType
 
-/**
-  * Created by shea on 7/25/17.
-  *
-  *
-  * Underlying implementation is the breeze matrix with a size quality
-  *
-  *
-  * I'm sure that I'm going top need to be doing a number of matrix operations with this
-  * but since Breeze doesn't have N dimensional matrices implemented I'll probably have to use
-  * a DenseVector as a backing datastructure.
-  *
-  * The multidimensional matrix implementation would likely be something similar, so
-  * this file is marked with the intention of being pull requested into Breeze once it is near
-  * feature complete. Depends on how many matrix operations I need to implement in order to solve the core
-  * pcl functions.
-  *
-  *
-  * It's probably best to just drive forward until I need to perform linear algerbra operations.
-  * I'll follow breeze as a template until then.
-  *
-  *
-  * Notes on storing multidimensional matrices in scala:
-  *
-  */
+object IndexType extends Enumeration {
+  type IndexType = Value
+  val RowMajor, ColumnMajor = Value
+}
 
 /**
   *
