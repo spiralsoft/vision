@@ -69,7 +69,101 @@ object MultiDimensionalMatrix {
     apply(dim, arr.grouped(pair_length).toIterable, index_type)
 
   }
-  
+
+  /**
+    * Generates a multidimensional matrix from an array of arrays that contain coordinate, ..., coordinate, value, ..., values
+    * Handles pointclouds with variable number of C->RGB->Any
+    * @param points
+    */
+  def apply(
+    dim: Array[Int],
+    points: Iterable[Iterable[Double]],
+    index_type: IndexType.IndexType = IndexType.RowMajor
+  ): MultiDimensionalMatrix = {
+    val data_array: Array[Double] = {
+      index_type match {
+        case IndexType.ColumnMajor => generateCoordValDataArrayColumnMajor(dim, points)
+        case IndexType.RowMajor    => generateCoordValDataArrayRowMajor(dim, points)
+      }
+    }
+
+    new MultiDimensionalMatrix(dim, data_array, index_type)
+  }
+
+  /**
+    * Determines the nesting based on the input structure of the array and generates a matrix
+    * @param arr of the format Seq(Seq(...Seq(Double)))
+    */
+  def apply(
+    arr: Seq[Any],
+    index_type: IndexType.IndexType = IndexType.RowMajor
+  ) = {
+    val dim: Seq[Int] = determineDimension(arr)
+
+    val size = getArraySizeFromDimension(dim)
+
+    val data_array: Array[Double] = Array.fill[Double](size)(null)
+
+    populateArrayFromNested(arr, data_array, index_type)
+
+  }
+
+  /**
+    * Recurses into provided array and populates a data array from it
+    * @param arr An nested series of arrays
+    * @param data_array the reference to the data array to populate
+    * @param index_type indexing method
+    * @return
+    */
+  private def populateArrayFromNested(
+    arr: Seq[Any],
+    data_array: Array[Double],
+    index_type: IndexType.IndexType
+  ): Array[Double] ={
+
+
+    val get_index: (Seq[Int]) => Int =
+      index_type match {
+        case IndexType.RowMajor    => getArrayIndexRowMajor
+        case IndexType.ColumnMajor => getArrayIndexColumnMajor
+      }
+
+    // Internal function to recursively build data array
+    def recurse(arr: Seq[Any], data_array: Array[Double], prev_ind: Seq[Int]): Array[Double] = {
+      val populateEach: (Int) => Unit = (ind: Int) => {
+        val arr_value = arr(ind)
+        val next_ind = prev_ind ++ Seq(ind)
+
+        arr_value match {
+          case value: Double    => data_array(get_index(next_ind)) = value
+          case nested: Seq[Any] => recurse(arr, data_array, next_ind)
+        }
+      }
+
+      // Parallelize if greater than a certain number. 15000 is chosen based on http://docs.scala-lang.org/overviews/parallel-collections/performance.html
+      if (arr.length > 15000) {
+        arr.indices.par.foreach(populateEach)
+      } else {
+        arr.indices.foreach(populateEach)
+      }
+
+      data_array
+    }
+
+    recurse(arr, data_array, Seq())
+  }
+
+  /**
+    * Determines the dimensions of a nested series of sequences
+    * @param arr
+    * @return
+    */
+  private def determineDimension(arr: Seq[Any]): Seq[Int] = {
+    arr.headOption match {
+      case Some(nest: Seq[Any]) => Seq(arr.length) ++ determineDimension(nest)
+      case Some(term: Double)   => Seq(arr.length)
+    }
+  }
 
   private def generateCoordValDataArrayRowMajor(dim: Array[Int], points: Iterable[Iterable[Double]]): Array[Double] = {
     val size = getArrayIndexRowMajor(dim)
@@ -137,23 +231,20 @@ object MultiDimensionalMatrix {
     data_array
   }
 
-
   /**
-    * Generates a multidimensional matrix from an array of arrays that contain coordinate, ..., coordinate, value, ..., values
-    * Handles pointclouds with variable number of C->RGB->Any
-    * @param points
+    * Gets the data array size from its dimensions
+    * @param dim
+    * @return
     */
-  def apply(dim: Array[Int], points: Iterable[Iterable[Double]], index_type: IndexType.IndexType = IndexType.RowMajor): MultiDimensionalMatrix = {
-    val data_array: Array[Double] = {
-      index_type match {
-        case IndexType.ColumnMajor => generateCoordValDataArrayColumnMajor(dim, points)
-        case IndexType.RowMajor    => generateCoordValDataArrayRowMajor(dim, points)
-      }
-    }
-
-    new MultiDimensionalMatrix(dim, data_array, index_type)
+  private def getArraySizeFromDimension(dim: Seq[Int]): Int = {
+    getArrayIndexRowMajor(dim)
   }
 
+  /**
+    * Gets the index of an element from the dimensions provided, row major
+    * @param index Seq of the coordinates you want
+    * @return
+    */
   private def getArrayIndexRowMajor(index: Iterable[Int]): Int =
   {
     index.view.zipWithIndex.foldLeft(0)[Int]{
@@ -162,6 +253,11 @@ object MultiDimensionalMatrix {
   }
 
 
+  /**
+    * Gets the index of an element, column major
+    * @param index Seq of the coordinates you want
+    * @return
+    */
   private def getArrayIndexColumnMajor(index: Iterable[Int]): Int =
   {
     index.view.zipWithIndex.foldRight(0)[Int]{
