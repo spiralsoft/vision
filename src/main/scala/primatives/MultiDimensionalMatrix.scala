@@ -29,7 +29,12 @@ object IndexType extends Enumeration {
 // Or I can use matrix.get(Seq(x,y,z)) and get back {n}/None/Null
 // Or I can use matrix.get(Seq(x,y))
 
-class MultiDimensionalMatrix[Double] (dim: Seq[Int], input_data: Array[Double]) {
+class MultiDimensionalMatrix (
+  val dim: Array[Int],
+  input_data: Array[Double],
+  val index_type: IndexType = IndexType.RowMajor
+) {
+
   val data: DenseVector[Double] = DenseVector[Double](input_data)
 
   def getArrayIndexRowMajor(index: Seq[Int]): Int =
