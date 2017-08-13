@@ -9,25 +9,11 @@ object IndexType extends Enumeration {
 }
 
 /**
-  *
-  * Storing multidimensional matrices in scala
-  *
-  * @param dim The dimension of the matrix as a sequence of integers
+  * A multidimensional matrix
+  * @param dim Dimensions of the matrix in row, column -> nth dimension format.
+  * @param input_data The input, flattened array of values
+  * @param index_type RowMajor/ColumnMajor
   */
-
-
-// What I'll be getting:
-// [[x, y, z, {c, r, g, b}], [x, y, z, c], [x, y, z, c]]
-// I want to retrieve the information at point [x, y, z, 1-4]
-// The other thing I may receive is a 3 dimension matrix. I may want to receive all of the values with [x, y]
-
-// I want to be able to get all zs at a certain x,y
-// I want to be able to get all {c,r,g,b} at a certain xyz
-// I want to be able to know the number of z populated at x,y
-
-// The 1D array can be indexed in such a way that I can can give it a formula, matrix.get(Seq(x,y,z,n)) and I get back c
-// Or I can use matrix.get(Seq(x,y,z)) and get back {n}/None/Null
-// Or I can use matrix.get(Seq(x,y))
 
 class MultiDimensionalMatrix (
   val dim: Array[Int],
@@ -97,7 +83,7 @@ object MultiDimensionalMatrix {
   def apply(
     arr: Seq[Any],
     index_type: IndexType.IndexType = IndexType.RowMajor
-  ) = {
+  ): MultiDimensionalMatrix = {
     val dim: Seq[Int] = determineDimension(arr)
 
     val size = getArraySizeFromDimension(dim)
@@ -165,6 +151,12 @@ object MultiDimensionalMatrix {
     }
   }
 
+  /**
+    * Generate data array from an array of arrays that contain (coordinate, ..., coordinate -> value, ..., value) pairs
+    * @param dim Dimensions of target matrix
+    * @param points
+    * @return
+    */
   private def generateCoordValDataArrayRowMajor(dim: Array[Int], points: Iterable[Iterable[Double]]): Array[Double] = {
     val size = getArrayIndexRowMajor(dim)
 
@@ -198,6 +190,12 @@ object MultiDimensionalMatrix {
     data_array
   }
 
+  /**
+    * Generate data array from an array of arrays that contain (value, ..., value -> coord, ..., coord) pairs
+    * @param dim Dimensions of target matrix
+    * @param points
+    * @return
+    */
   private def generateCoordValDataArrayColumnMajor(dim: Array[Int], points: Iterable[Iterable[Double]]): Array[Double] = {
     val size = getArrayIndexColumnMajor(dim)
 
