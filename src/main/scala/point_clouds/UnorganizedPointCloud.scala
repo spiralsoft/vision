@@ -1,6 +1,6 @@
-package structures
+package point_clouds
 
-import primatives.MultiDimensionalMatrix
+import structures.MultiDimensionalMatrix
 
 /**
   * Created by shea on 7/25/17.
@@ -36,5 +36,5 @@ class PointCloud {
 
   // We have N samples. We need 3 array floats per sample. Size of N*3
 
-  val points: MultiDimensionalMatrix[Float]()
+  //val points: MultiDimensionalMatrix[Float]()
 }
