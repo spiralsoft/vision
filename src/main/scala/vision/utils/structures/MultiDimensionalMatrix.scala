@@ -1,7 +1,11 @@
-package structures
+package vision.utils.structures
 
 import breeze.linalg.DenseVector
-import utils.ArrayUtils
+import vision.utils.ArrayUtils
+import vision.utils.primatives.NaN
+
+import scala.reflect.ClassTag
+import scala.{specialized => spec}
 
 object IndexType extends Enumeration {
   type IndexType = Value
@@ -85,14 +89,14 @@ object MultiDimensionalMatrix {
     * Determines the nesting based on the input structure of the array and generates a matrix
     * @param arr of the format Seq(Seq(...Seq(Double)))
     */
-  def apply(
+  def apply[@spec(Float, Double): ClassTag: NaN](
     arr: Seq[Any],
     index_type: IndexType = RowMajor
   ): MultiDimensionalMatrix = {
     val dim: Seq[Int] = determineDimension(arr)
 
     val size = getArraySizeFromDimension(dim)
-    val data_array: Array[Double] = ArrayUtils.nullArray[Double](size)
+    val data_array: Array[Double] = ArrayUtils.nanArrayDouble(size)
 
 
     populateArrayFromNested(arr, data_array, index_type)
@@ -173,7 +177,7 @@ object MultiDimensionalMatrix {
     val num_vals    = dim.last
     val pair_length = num_coords + num_vals
 
-    val data_array = ArrayUtils.nullArray[Double](size)
+    val data_array = ArrayUtils.nanArrayDouble(size)
 
 
     // Indexes the data array appropriately, filling the coordinate spaces with the values of the last dimension
@@ -213,7 +217,7 @@ object MultiDimensionalMatrix {
     val num_vals    = dim.head
     val pair_length = num_coords + num_vals
 
-    val data_array = ArrayUtils.nullArray[Double](size)
+    val data_array = ArrayUtils.nanArrayDouble(size)
 
     // Indexes the data array appropriately, filling the coordinate spaces with the values of the last dimension
     points.par.foreach(

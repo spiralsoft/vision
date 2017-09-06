@@ -1,6 +1,6 @@
-package point_clouds
+package vision.utils.point_clouds
 
-import structures.MultiDimensionalMatrix
+import vision.utils.structures.MultiDimensionalMatrix
 
 /**
   * Created by shea on 7/25/17.
