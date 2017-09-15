@@ -1,4 +1,4 @@
-package vision.utils.primatives
+package vision.utils.types
 
 import breeze.storage.Zero
 import breeze.storage.Zero.{BooleanZero, ByteZero, CharZero, DoubleZero, FloatZero, IntZero, ShortZero, refDefault}
@@ -10,7 +10,7 @@ import breeze.storage.Zero.{BooleanZero, ByteZero, CharZero, DoubleZero, FloatZe
   * Specialized numeric class that allows you to retrieve a generic NaN depending on input type
   */
 
-trait NaN[@specialized T] extends Serializable {
+trait NaN[@specialized(Double, Float) T] extends Serializable {
   def NaN : T
 }
 

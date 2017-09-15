@@ -2,17 +2,11 @@ package vision.utils.structures
 
 import breeze.linalg.DenseVector
 import vision.utils.ArrayUtils
-import vision.utils.primatives.NaN
+import vision.utils.types.{Converter, NaN}
 
 import scala.reflect.ClassTag
 import scala.{specialized => spec}
-
-object IndexType extends Enumeration {
-  type IndexType = Value
-  val RowMajor, ColumnMajor = Value
-}
-
-import IndexType._
+import MatrixIndexType._
 /**
   * A multidimensional matrix
   * @param dim Dimensions of the matrix in row, column -> nth dimension format.
@@ -20,21 +14,21 @@ import IndexType._
   * @param index_type RowMajor/ColumnMajor
   */
 
-class MultiDimensionalMatrix (
+class MultiDimensionalMatrix[@spec(Float, Double) Num: NaN](
   val dim: Seq[Int],
-  input_data: Array[Double],
-  val index_type: IndexType
+  input_data: Array[Num],
+  index_type: IndexType
 ) {
+  val data: DenseVector[Num] = DenseVector[Num](input_data)
 
-  val data: DenseVector[Double] = DenseVector[Double](input_data)
-
-  val getIndex: (Seq[Int]) => Int = {
+  // @TODO file bug about match with spec val expression
+  // lazy val because compiler error occurs on constructor-executed match statement
+  lazy val getIndex: (Seq[Int]) => Int = {
     index_type match {
       case ColumnMajor => MultiDimensionalMatrix.getArrayIndexColumnMajor
       case RowMajor    => MultiDimensionalMatrix.getArrayIndexRowMajor
     }
   }
-
 
 }
 
@@ -48,11 +42,11 @@ object MultiDimensionalMatrix {
     * @param arr Flattened array of Seq[coordinate] --> Seq[value] pairs. The number of values per coordinate is the final dimension
     *            of the array.
     */
-  def apply(
+  def apply[@spec(Float, Double) Num: NaN: Converter: ClassTag](
     dim: Array[Int],
-    arr: Seq[Double],
+    arr: Seq[Num],
     index_type: IndexType
-  ): MultiDimensionalMatrix = {
+  ): MultiDimensionalMatrix[Num] = {
 
     val pair_length = {
       index_type match {
@@ -70,12 +64,12 @@ object MultiDimensionalMatrix {
     * Handles pointclouds with variable number of C->RGB->Any
     * @param points
     */
-  def apply(
+  def apply[@spec(Float, Double) Num: NaN: Converter: ClassTag](
     dim: Array[Int],
-    points: Iterable[Iterable[Double]],
+    points: Iterable[Iterable[Num]],
     index_type: IndexType
-  ): MultiDimensionalMatrix = {
-    val data_array: Array[Double] = {
+  ): MultiDimensionalMatrix[Num] = {
+    val data_array: Array[Num] = {
       index_type match {
         case ColumnMajor => generateCoordValDataArrayColumnMajor(dim, points)
         case RowMajor    => generateCoordValDataArrayRowMajor(dim, points)
@@ -89,14 +83,14 @@ object MultiDimensionalMatrix {
     * Determines the nesting based on the input structure of the array and generates a matrix
     * @param arr of the format Seq(Seq(...Seq(Double)))
     */
-  def apply[@spec(Float, Double): ClassTag: NaN](
-    arr: Seq[Any],
+  def apply[@spec(Float, Double) Num: NaN: ClassTag](
+    arr: Seq[Num],
     index_type: IndexType = RowMajor
-  ): MultiDimensionalMatrix = {
+  ): MultiDimensionalMatrix[Num] = {
     val dim: Seq[Int] = determineDimension(arr)
 
     val size = getArraySizeFromDimension(dim)
-    val data_array: Array[Double] = ArrayUtils.nanArrayDouble(size)
+    val data_array: Array[Num] = ArrayUtils.nanArray[Num](size)
 
 
     populateArrayFromNested(arr, data_array, index_type)
@@ -111,11 +105,11 @@ object MultiDimensionalMatrix {
     * @param index_type indexing method
     * @return
     */
-  private def populateArrayFromNested(
+  private def populateArrayFromNested[@spec(Float, Double) Num](
     arr: Seq[Any],
-    data_array: Array[Double],
+    data_array: Array[Num],
     index_type: IndexType
-  ): Array[Double] ={
+  ): Array[Num] ={
 
 
     val get_index: (Seq[Int]) => Int =
@@ -125,14 +119,14 @@ object MultiDimensionalMatrix {
       }
 
     // Internal function to recursively build data array
-    def recurse(arr: Seq[Any], data_array: Array[Double], prev_ind: Seq[Int]): Array[Double] = {
+    def recurse(arr: Seq[Any], data_array: Array[Num], prev_ind: Seq[Int] = Seq()): Array[Num] = {
       val populateEach: (Int) => Unit = (ind: Int) => {
         val arr_value = arr(ind)
         val next_ind = prev_ind ++ Seq(ind)
 
         arr_value match {
-          case value: Double    => data_array(get_index(next_ind)) = value
-          case nested: Seq[Any] => recurse(arr, data_array, next_ind)
+          case value: Num@unchecked => data_array(get_index(next_ind)) = value
+          case nested: Seq[Any]     => recurse(arr, data_array, next_ind)
         }
       }
 
@@ -146,7 +140,7 @@ object MultiDimensionalMatrix {
       data_array
     }
 
-    recurse(arr, data_array, Seq())
+    recurse(arr, data_array)
   }
 
 
@@ -170,22 +164,27 @@ object MultiDimensionalMatrix {
     * @param points
     * @return
     */
-  private def generateCoordValDataArrayRowMajor(dim: Array[Int], points: Iterable[Iterable[Double]]): Array[Double] = {
+  private def generateCoordValDataArrayRowMajor[@spec(Float, Double) Num: Converter: NaN: ClassTag](dim: Array[Int], points: Iterable[Iterable[Num]]): Array[Num] = {
+
+    val convert = implicitly[Converter[Num]].convert _
+
     val size = getArrayIndexRowMajor(dim)
 
     val num_coords  = dim.length - 1
     val num_vals    = dim.last
     val pair_length = num_coords + num_vals
 
-    val data_array = ArrayUtils.nanArrayDouble(size)
+    val data_array = ArrayUtils.nanArray[Num](size)
 
 
     // Indexes the data array appropriately, filling the coordinate spaces with the values of the last dimension
     points.par.foreach(
-      (point: Iterable[Double]) => {
+      (point: Iterable[Num]) => {
 
         // Gives the coordinate excluding the last value
-        val coord = point.slice(0, num_coords + 1).map(double => double.toInt)
+        val coord = point.slice(0, num_coords + 1).map((num: Num) => {
+          convert(num).toInt
+        })
         val index = getArrayIndexColumnMajor(coord)
 
         val values = point.slice(num_coords + 1, pair_length)
@@ -210,21 +209,23 @@ object MultiDimensionalMatrix {
     * @param points
     * @return
     */
-  private def generateCoordValDataArrayColumnMajor(dim: Array[Int], points: Iterable[Iterable[Double]]): Array[Double] = {
+  private def generateCoordValDataArrayColumnMajor[@spec(Float, Double) Num: Converter: NaN: ClassTag](dim: Array[Int], points: Iterable[Iterable[Num]]): Array[Num] = {
+    val convert = implicitly[Converter[Num]].convert _
+
     val size = getArrayIndexColumnMajor(dim)
 
     val num_coords  = dim.length - 1
     val num_vals    = dim.head
     val pair_length = num_coords + num_vals
 
-    val data_array = ArrayUtils.nanArrayDouble(size)
+    val data_array = ArrayUtils.nanArray[Num](size)
 
     // Indexes the data array appropriately, filling the coordinate spaces with the values of the last dimension
     points.par.foreach(
-      (point: Iterable[Double]) => {
+      (point: Iterable[Num]) => {
 
-        // Gives the coordinate excluding the values
-        val coord = Seq(0) ++ point.slice(num_vals + 1, num_coords + 1).map(double => double.toInt)
+        // Gives the coordinate excluding the valuess
+        val coord = Seq(0) ++ point.slice(num_vals + 1, num_coords + 1).map(num => convert(num).toInt)
         val index = getArrayIndexColumnMajor(coord)
 
         val values = point.slice(0, num_vals + 1)
