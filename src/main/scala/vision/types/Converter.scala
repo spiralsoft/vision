@@ -1,7 +1,4 @@
-package vision.utils.types
-import breeze.storage.Zero
-import breeze.storage.Zero.{BooleanZero, ByteZero, CharZero, DoubleZero, FloatZero, IntZero, ShortZero, refDefault}
-import vision.utils.types.NaN.{DoubleNaN, FloatNaN}
+package vision.types
 
 /**
   * Created by shea on 9/6/17.

@@ -1,12 +1,13 @@
-package vision.utils.structures
+package vision.structures
 
 import breeze.linalg.DenseVector
-import vision.utils.ArrayUtils
-import vision.utils.types.{Converter, NaN}
+import vision.types.{Converter, NaN}
 
 import scala.reflect.ClassTag
 import scala.{specialized => spec}
 import MatrixIndexType._
+import vision.utils.ArrayUtils
+
 /**
   * A multidimensional matrix
   * @param dim Dimensions of the matrix in row, column -> nth dimension format.
@@ -23,11 +24,29 @@ class MultiDimensionalMatrix[@spec(Float, Double) Num: NaN](
 
   // @TODO file bug about match with spec val expression
   // lazy val because compiler error occurs on constructor-executed match statement
-  lazy val getIndex: (Seq[Int]) => Int = {
+  lazy val getFlattenedIndex: (Seq[Int]) => Int = {
     index_type match {
       case ColumnMajor => MultiDimensionalMatrix.getArrayIndexColumnMajor
       case RowMajor    => MultiDimensionalMatrix.getArrayIndexRowMajor
     }
+  }
+
+  /**
+    * Gets the value of the element at the provided dimensional index
+    * @param ind
+    * @return
+    */
+  def getAtIndex(ind: Seq[Int]): Num = {
+    getAtFlattenedIndex(getFlattenedIndex(ind))
+  }
+
+  /**
+    * Gets the value of the element at the provided flattened index
+    * @param flat_ind
+    * @return
+    */
+  def getAtFlattenedIndex(flat_ind: Int): Num = {
+    data.data(flat_ind)
   }
 
 }
@@ -84,7 +103,7 @@ object MultiDimensionalMatrix {
     * @param arr of the format Seq(Seq(...Seq(Double)))
     */
   def apply[@spec(Float, Double) Num: NaN: ClassTag](
-    arr: Seq[Num],
+    arr: Seq[Any],
     index_type: IndexType = RowMajor
   ): MultiDimensionalMatrix[Num] = {
     val dim: Seq[Int] = determineDimension(arr)
@@ -119,7 +138,8 @@ object MultiDimensionalMatrix {
       }
 
     // Internal function to recursively build data array
-    def recurse(arr: Seq[Any], data_array: Array[Num], prev_ind: Seq[Int] = Seq()): Array[Num] = {
+    // @TODO file bug about default values in methods + @spec
+    def recurse(arr: Seq[Any], data_array: Array[Num], prev_ind: Seq[Int]): Array[Num] = {
       val populateEach: (Int) => Unit = (ind: Int) => {
         val arr_value = arr(ind)
         val next_ind = prev_ind ++ Seq(ind)
@@ -140,7 +160,7 @@ object MultiDimensionalMatrix {
       data_array
     }
 
-    recurse(arr, data_array)
+    recurse(arr, data_array, Seq())
   }
 
 

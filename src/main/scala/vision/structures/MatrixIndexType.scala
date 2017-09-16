@@ -1,4 +1,4 @@
-package vision.utils.structures
+package vision.structures
 
 /**
   * Created by shea on 9/15/17.

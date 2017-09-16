@@ -1,6 +1,6 @@
 package vision.utils
 
-import vision.utils.types.NaN
+import vision.types.NaN
 
 import scala.reflect.ClassTag
 import scala.{specialized => spec}
