@@ -18,17 +18,39 @@ import vision.utils.ArrayUtils
 class MultiDimensionalMatrix[@spec(Float, Double) Num: NaN](
   val dim: Seq[Int],
   input_data: Array[Num],
-  index_type: IndexType
+  val index_type: IndexType
 ) {
   val data: DenseVector[Num] = DenseVector[Num](input_data)
+
+  val dim_sizes: Seq[Int] = MultiDimensionalMatrix.getDimensionSizesFromDimensions(dim, index_type)
 
   // @TODO file bug about match with spec val expression
   // lazy val because compiler error occurs on constructor-executed match statement
   lazy val getFlattenedIndex: (Seq[Int]) => Int = {
     index_type match {
-      case ColumnMajor => MultiDimensionalMatrix.getArrayIndexColumnMajor
-      case RowMajor    => MultiDimensionalMatrix.getArrayIndexRowMajor
+      case ColumnMajor => MultiDimensionalMatrix.getArrayIndexColumnMajor(_: Seq[Int], dim_sizes)
+      case RowMajor    => MultiDimensionalMatrix.getArrayIndexRowMajor(_: Seq[Int], dim_sizes)
     }
+  }
+
+
+  /**
+    * Convenience function for getting a value at a certain flat index
+    * @param flat_ind the index computed by reducing the seq of dim_indices
+    * @return
+    */
+  def get(flat_ind: Int): Num = {
+    data.data(flat_ind)
+  }
+
+  /**
+    * Convenience function for getting a value at a certain index
+    * // @TODO Handle shortened dimensions?
+    * @param ind Sequence of dimension index at which to retrieve the value
+    * @return
+    */
+  def get(ind: Seq[Int]): Num = {
+    getAtIndex(ind)
   }
 
   /**
@@ -48,6 +70,7 @@ class MultiDimensionalMatrix[@spec(Float, Double) Num: NaN](
   def getAtFlattenedIndex(flat_ind: Int): Num = {
     data.data(flat_ind)
   }
+
 
 }
 
@@ -106,13 +129,9 @@ object MultiDimensionalMatrix {
     arr: Seq[Any],
     index_type: IndexType = RowMajor
   ): MultiDimensionalMatrix[Num] = {
-    val dim: Seq[Int] = determineDimension(arr)
 
-    val size = getArraySizeFromDimension(dim)
-    val data_array: Array[Num] = ArrayUtils.nanArray[Num](size)
-
-
-    populateArrayFromNested(arr, data_array, index_type)
+    val dim: Seq[Int]          = determineDimension(arr)
+    val data_array: Array[Num] = flattenNested[Num](arr, dim, index_type)
 
     new MultiDimensionalMatrix(dim, data_array, index_type)
   }
@@ -120,37 +139,41 @@ object MultiDimensionalMatrix {
   /**
     * Recurses into provided array and populates a data array from it
     * @param arr An nested series of arrays
-    * @param data_array the reference to the data array to populate
+    * @param dim The dimensions of the nested array
     * @param index_type indexing method
     * @return
     */
-  private def populateArrayFromNested[@spec(Float, Double) Num](
+  private def flattenNested[@spec(Float, Double) Num: NaN: ClassTag](
     arr: Seq[Any],
-    data_array: Array[Num],
+    dim: Seq[Int],
     index_type: IndexType
   ): Array[Num] ={
+    val dim_sizes = getDimensionSizesFromDimensions(dim, index_type)
+    val size      = getArraySizeFromDimension(dim, index_type)
 
+    val data_array: Array[Num] = ArrayUtils.nanArray[Num](size)
 
     val get_index: (Seq[Int]) => Int =
       index_type match {
-        case RowMajor    => getArrayIndexRowMajor
-        case ColumnMajor => getArrayIndexColumnMajor
+        case RowMajor    => getArrayIndexRowMajor(_: Seq[Int], dim_sizes)
+        case ColumnMajor => getArrayIndexColumnMajor(_: Seq[Int], dim_sizes)
       }
 
     // Internal function to recursively build data array
-    // @TODO file bug about default values in methods + @spec
+    // @P2-TODO file bug about default values in methods + @spec
     def recurse(arr: Seq[Any], data_array: Array[Num], prev_ind: Seq[Int]): Array[Num] = {
       val populateEach: (Int) => Unit = (ind: Int) => {
         val arr_value = arr(ind)
-        val next_ind = prev_ind ++ Seq(ind)
+        val next_ind = prev_ind :+ ind
 
         arr_value match {
+          case nested: Seq[Any]     => recurse(nested, data_array, next_ind)
           case value: Num@unchecked => data_array(get_index(next_ind)) = value
-          case nested: Seq[Any]     => recurse(arr, data_array, next_ind)
         }
       }
 
       // Parallelize if greater than a certain number. 15000 is chosen based on http://docs.scala-lang.org/overviews/parallel-collections/performance.html
+      // @P3-TODO handle cases with large dimensions + large length -- we'll spawn too many threads if dimensions are too deep
       if (arr.length > 15000) {
         arr.indices.par.foreach(populateEach)
       } else {
@@ -188,7 +211,8 @@ object MultiDimensionalMatrix {
 
     val convert = implicitly[Converter[Num]].convert _
 
-    val size = getArrayIndexRowMajor(dim)
+    val size      = getArraySizeFromDimension(dim, RowMajor)
+    val dim_sizes = getDimensionSizesFromDimensions(dim, RowMajor)
 
     val num_coords  = dim.length - 1
     val num_vals    = dim.last
@@ -205,7 +229,7 @@ object MultiDimensionalMatrix {
         val coord = point.slice(0, num_coords + 1).map((num: Num) => {
           convert(num).toInt
         })
-        val index = getArrayIndexColumnMajor(coord)
+        val index = getArrayIndexRowMajor(coord, dim_sizes)
 
         val values = point.slice(num_coords + 1, pair_length)
 
@@ -232,7 +256,8 @@ object MultiDimensionalMatrix {
   private def generateCoordValDataArrayColumnMajor[@spec(Float, Double) Num: Converter: NaN: ClassTag](dim: Array[Int], points: Iterable[Iterable[Num]]): Array[Num] = {
     val convert = implicitly[Converter[Num]].convert _
 
-    val size = getArrayIndexColumnMajor(dim)
+    val size      = getArraySizeFromDimension(dim, ColumnMajor)
+    val dim_sizes = getDimensionSizesFromDimensions(dim, ColumnMajor)
 
     val num_coords  = dim.length - 1
     val num_vals    = dim.head
@@ -246,7 +271,7 @@ object MultiDimensionalMatrix {
 
         // Gives the coordinate excluding the valuess
         val coord = Seq(0) ++ point.slice(num_vals + 1, num_coords + 1).map(num => convert(num).toInt)
-        val index = getArrayIndexColumnMajor(coord)
+        val index = getArrayIndexColumnMajor(coord, dim_sizes)
 
         val values = point.slice(0, num_vals + 1)
 
@@ -264,13 +289,32 @@ object MultiDimensionalMatrix {
     data_array
   }
 
+  private def getDimensionSizeColumnMajor(dim: Seq[Int]): Seq[Int] = {
+    dim.dropRight(1).scanLeft(dim.last)(
+      (accum: Int, max_dim: Int) => accum * max_dim
+    )
+  }
+
+  private def getDimensionSizesFromDimensions(dim: Seq[Int], index_type: IndexType): Seq[Int] = {
+    index_type match {
+      case RowMajor    => throw new Exception("Not yet implemented")
+      case ColumnMajor => getDimensionSizeColumnMajor(dim)
+    }
+  }
+
   /**
     * Gets the data array size from its dimensions
     * @param dim
     * @return
     */
-  private def getArraySizeFromDimension(dim: Seq[Int]): Int = {
-    getArrayIndexRowMajor(dim)
+  private def getArraySizeFromDimension(dim: Seq[Int], index_type: IndexType): Int = {
+
+    val dim_sizes = getDimensionSizesFromDimensions(dim, index_type)
+
+    index_type match {
+      case RowMajor    => dim_sizes.last * dim.last
+      case ColumnMajor => dim_sizes.head * dim.head
+    }
   }
 
   /**
@@ -278,7 +322,7 @@ object MultiDimensionalMatrix {
     * @param index Seq of the coordinates you want
     * @return
     */
-  private def getArrayIndexRowMajor(index: Iterable[Int]): Int =
+  private def getArrayIndexRowMajor(index: Iterable[Int], dim_sizes: Seq[Int]): Int =
   {
     index.view.zipWithIndex.foldLeft(0){
       case (accum: Int, index_dim: (Int, Int)) => index_dim._1 + index_dim._2 * accum
@@ -291,10 +335,23 @@ object MultiDimensionalMatrix {
     * @param index Seq of the coordinates you want
     * @return
     */
-  private def getArrayIndexColumnMajor(index: Iterable[Int]): Int =
+  private def getArrayIndexColumnMajor(index: Iterable[Int], dim_sizes: Seq[Int]): Int =
   {
     index.view.zipWithIndex.foldRight(0){
-      case (index_dim: (Int, Int), accum: Int) => index_dim._1 + index_dim._2 * accum
+      case (index_dim: (Int, Int), accum: Int) => {
+        // index correction, since we're scanning left we get the index of the relevant dimension size
+        // num dimensions - current dimension (ind + 1)
+        val size_ind = dim_sizes.length - (index_dim._2 + 1)
+
+        if (size_ind == 0) {
+          // If this is the first dimension, we know there is no accumulation, and the default
+          index_dim._1
+        } else {
+          // The index of the current dimension times the size of each of the prev dim size
+          // plus the number of accumalated partial dimensions
+          index_dim._1 * dim_sizes(size_ind - 1) + accum
+        }
+      }
     }
   }
 }
