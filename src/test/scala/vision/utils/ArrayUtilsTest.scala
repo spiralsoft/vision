@@ -1,7 +1,8 @@
 package vision.utils
 
 import org.scalatest.{FlatSpec, Matchers}
-import vision.utils.ArrayUtils.{nanArray}
+import vision.utils.ArrayUtils.nanArray
+
 import scala.util.Random
 /**
   * Created by shea on 9/6/17.

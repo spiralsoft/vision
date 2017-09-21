@@ -12,7 +12,6 @@ object ArrayUtils {
 
   /**
     * Returns an array[M] of size filled with NaN
-    * No
     *
     * @param size
     * @return
