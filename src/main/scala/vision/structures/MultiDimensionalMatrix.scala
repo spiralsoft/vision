@@ -131,6 +131,7 @@ object MultiDimensionalMatrix {
   ): MultiDimensionalMatrix[Num] = {
 
     val dim: Seq[Int]          = determineDimension(arr)
+
     val data_array: Array[Num] = flattenNested[Num](arr, dim, index_type)
 
     new MultiDimensionalMatrix(dim, data_array, index_type)
@@ -165,7 +166,6 @@ object MultiDimensionalMatrix {
       val populateEach: (Int) => Unit = (ind: Int) => {
         val arr_value = arr(ind)
         val next_ind = prev_ind :+ ind
-
         arr_value match {
           case nested: Seq[Any]     => recurse(nested, data_array, next_ind)
           case value: Num@unchecked => data_array(get_index(next_ind)) = value
@@ -290,7 +290,7 @@ object MultiDimensionalMatrix {
   }
 
   private def getDimensionSizeColumnMajor(dim: Seq[Int]): Seq[Int] = {
-    dim.dropRight(1).scanLeft(dim.last)(
+    dim.dropRight(1).scanRight(dim.last)(
       (accum: Int, max_dim: Int) => accum * max_dim
     )
   }
@@ -312,8 +312,8 @@ object MultiDimensionalMatrix {
     val dim_sizes = getDimensionSizesFromDimensions(dim, index_type)
 
     index_type match {
-      case RowMajor    => dim_sizes.last * dim.last
-      case ColumnMajor => dim_sizes.head * dim.head
+      case RowMajor    => dim_sizes.last
+      case ColumnMajor => dim_sizes.head
     }
   }
 
@@ -341,15 +341,15 @@ object MultiDimensionalMatrix {
       case (index_dim: (Int, Int), accum: Int) => {
         // index correction, since we're scanning left we get the index of the relevant dimension size
         // num dimensions - current dimension (ind + 1)
-        val size_ind = dim_sizes.length - (index_dim._2 + 1)
+        val (index, dim) = index_dim
 
-        if (size_ind == 0) {
-          // If this is the first dimension, we know there is no accumulation, and the default
-          index_dim._1
+        // If this is the first dimension (corrected for index at 0), we know there is no accumulation, and the default
+        if ((dim + 1) == dim_sizes.length) {
+          index
         } else {
           // The index of the current dimension times the size of each of the prev dim size
-          // plus the number of accumalated partial dimensions
-          index_dim._1 * dim_sizes(size_ind - 1) + accum
+          // plus the number of accumulated partial dimensions
+          index * dim_sizes(dim + 1) + accum
         }
       }
     }
