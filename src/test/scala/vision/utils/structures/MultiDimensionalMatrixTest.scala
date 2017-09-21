@@ -46,7 +46,37 @@ class MultiDimensionalMatrixTest extends FlatSpec with Matchers {
 
     mat_2d.getAtIndex(Seq(1, 1)) should be (doubles_2d(1)(1))
     mat_2d.getAtIndex(Seq(7, 8)) should be (doubles_2d(7)(8))
-    
+
+  }
+
+  behavior of "A three dimensional MDM"
+
+  val row_num_3 = 13
+  val col_num_3 = 12
+  val depth_num = 23
+
+  val doubles_3d: Seq[Seq[Seq[Double]]] =
+    Seq.fill[Seq[Seq[Double]]](row_num_3)(
+      Seq.fill[Seq[Double]](col_num_3)(
+        Seq.fill[Double](depth_num)(Math.random()
+        )
+      )
+    )
+
+  val mat_3d: MultiDimensionalMatrix[Double] = MultiDimensionalMatrix[Double](doubles_3d, MatrixIndexType.ColumnMajor)
+
+  it should "be created column-major with appropriate dimensions from a sequence of sequences." in {
+    mat_3d.dim.length should be (3)
+    mat_3d.dim.head should be (row_num_3)
+    mat_3d.dim(1)   should be (col_num_3)
+    mat_3d.dim.last should be (depth_num)
+  }
+
+  it should "contain the correct values in the correct positions" in {
+
+    mat_3d.getAtIndex(Seq(1, 1, 1)) should be (doubles_3d(1)(1)(1))
+    mat_3d.getAtIndex(Seq(4, 4, 3)) should be (doubles_3d(4)(4)(3))
+
   }
 
 
