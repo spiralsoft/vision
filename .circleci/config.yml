@@ -43,4 +43,3 @@ jobs:
 
       # deploy to bintray
       - run: cat /dev/null | sbt publish
-    

@@ -10,13 +10,10 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "io.spiralsoft",
       name         := "vision.core",
-      version      := "0.1.0",
+      version      := "0.1.1-SNAPSHOT",
       scalaVersion := "2.12.1"
     )),
 
-
-
-    name := "vision",
     libraryDependencies := Seq(
       "org.scalanlp" %% "breeze" % "0.13.1",
       "org.scalanlp" %% "breeze-natives" % "0.13.1",
