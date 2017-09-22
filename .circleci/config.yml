@@ -40,3 +40,7 @@ jobs:
 
       # run tests!
       - run: cat /dev/null | sbt test:test
+
+      # deploy to bintray
+      - run: cat /dev/null | sbt publish
+    
