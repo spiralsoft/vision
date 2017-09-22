@@ -1,7 +1,7 @@
 
-
-
-
+bintrayOrganization := Some("spiralsoft")
+bintrayRepository := "vision"
+licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
 
 lazy val root = (project in file(".")).
   settings(
@@ -9,8 +9,9 @@ lazy val root = (project in file(".")).
 
     inThisBuild(List(
       organization := "io.spiralsoft",
-      scalaVersion := "2.12.1",
-      version      := "0.1.0-SNAPSHOT"
+      name         := "vision.core",
+      version      := "0.1.0",
+      scalaVersion := "2.12.1"
     )),
 
 
