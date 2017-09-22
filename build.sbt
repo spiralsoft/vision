@@ -7,9 +7,10 @@ lazy val root = (project in file(".")).
   settings(
 
 
+    name           := "vision.core",
+
     inThisBuild(List(
       organization := "io.spiralsoft",
-      name         := "vision.core",
       version      := "0.1.1-SNAPSHOT",
       scalaVersion := "2.12.1"
     )),
