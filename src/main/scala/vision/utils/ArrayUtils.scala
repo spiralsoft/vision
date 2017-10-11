@@ -1,6 +1,9 @@
 package vision.utils
 
-import vision.types.NaN
+import vision.structures.MatrixIndexType.{ColumnMajor, IndexType, RowMajor}
+import vision.structures.MultiDimensionalMatrix
+import vision.structures.MultiDimensionalMatrix.{getArrayIndexColumnMajor, getArraySizeFromDimension, getDimensionSizeColumnMajor, getDimensionSizesFromDimensions}
+import vision.types.{Converter, NaN}
 
 import scala.reflect.ClassTag
 import scala.{specialized => spec}
@@ -24,5 +27,4 @@ object ArrayUtils {
     }
     arr
   }
-
 }

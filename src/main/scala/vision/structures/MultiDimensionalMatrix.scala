@@ -15,14 +15,15 @@ import vision.utils.ArrayUtils
   * @param index_type RowMajor/ColumnMajor
   */
 
-class MultiDimensionalMatrix[@spec(Float, Double) Num: NaN](
-  val dim: Seq[Int],
+case class MultiDimensionalMatrix[@spec(Float, Double) Num: NaN](
+  dim: Seq[Int],
   input_data: Array[Num],
-  val index_type: IndexType
+  index_type: IndexType
 ) {
   val data: DenseVector[Num] = DenseVector[Num](input_data)
 
-  val dim_sizes: Seq[Int] = MultiDimensionalMatrix.getDimensionSizesFromDimensions(dim, index_type)
+  // @TODO file bug about initialization match expressions
+  lazy val dim_sizes: Seq[Int] = MultiDimensionalMatrix.getDimensionSizesFromDimensions(dim, index_type)
 
   // @TODO file bug about match with spec val expression
   // lazy val because compiler error occurs on constructor-executed match statement
@@ -84,7 +85,7 @@ object MultiDimensionalMatrix {
     * @param arr Flattened array of Seq[coordinate] --> Seq[value] pairs. The number of values per coordinate is the final dimension
     *            of the array.
     */
-  def apply[@spec(Float, Double) Num: NaN: Converter: ClassTag](
+  def mdmFromFlattened[@spec(Float, Double) Num: NaN: Converter: ClassTag](
     dim: Array[Int],
     arr: Seq[Num],
     index_type: IndexType
@@ -97,7 +98,7 @@ object MultiDimensionalMatrix {
       }
     }
 
-    apply(dim, arr.grouped(pair_length).toIterable, index_type)
+    mdmFromGrouped(dim, arr.grouped(pair_length).toIterable, index_type)
 
   }
 
@@ -106,7 +107,7 @@ object MultiDimensionalMatrix {
     * Handles pointclouds with variable number of C->RGB->Any
     * @param points
     */
-  def apply[@spec(Float, Double) Num: NaN: Converter: ClassTag](
+  def mdmFromGrouped[@spec(Float, Double) Num: NaN: Converter: ClassTag](
     dim: Array[Int],
     points: Iterable[Iterable[Num]],
     index_type: IndexType
@@ -125,7 +126,7 @@ object MultiDimensionalMatrix {
     * Determines the nesting based on the input structure of the array and generates a matrix
     * @param arr of the format Seq(Seq(...Seq(Double)))
     */
-  def apply[@spec(Float, Double) Num: NaN: ClassTag](
+  def mdmFromNested[@spec(Float, Double) Num: NaN: ClassTag](
     arr: Seq[Any],
     index_type: IndexType = RowMajor
   ): MultiDimensionalMatrix[Num] = {
